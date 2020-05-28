@@ -25,6 +25,8 @@ func run() error {
 	var service pkg.Service
 	var step1Response pkg.StartHackResponse
 	var step2Response pkg.SubmitCardResponse
+	var step3Response pkg.ResendCodeResponse
+	var step4Response pkg.ConfirmPaymentResponse
 	err = godotenv.Load()
 	if err != nil {
 		log.WithError(err).Error("error loading .env, ignoring")
@@ -36,6 +38,9 @@ func run() error {
 	cardNumber = os.Getenv("CARD_NUMBER")
 	nameOnCard = os.Getenv("NAME_ON_CARD")
 	cardExpiry = os.Getenv("CARD_EXPIRY")
+
+	application := "bpchack-cli"
+	identity := os.Getenv("USER")
 
 mainLoop:
 	for !complete {
@@ -66,28 +71,22 @@ mainLoop:
 		}
 		service = pkg.NewService(mpiBaseUrl, 30*time.Second)
 		log.Info("service initialized")
-		complete = false
-		for !complete {
-			if paymentUrl != "" {
-				fmt.Printf("payment url [%s] > ", paymentUrl)
-			} else {
-				fmt.Print("payment url > ")
-			}
-			input, err = reader.ReadString('\n')
-			if err != nil {
-				eMsg := "error reading payment url, leaving"
-				log.WithError(err).Error(eMsg)
-				return errors.Wrap(err, eMsg)
-			}
-			input = strings.TrimSpace(input)
-			if input != "" {
-				paymentUrl = input
-			}
-			complete = true
+
+		fmt.Print("payment url > ")
+		input, err = reader.ReadString('\n')
+		if err != nil {
+			eMsg := "error reading payment url, leaving"
+			log.WithError(err).Error(eMsg)
+			return errors.Wrap(err, eMsg)
 		}
+		input = strings.TrimSpace(input)
+		if input != "" {
+			paymentUrl = input
+		}
+
 		step1Request := pkg.StartHackRequest{
-			Application: "bpchack-cli",
-			Identity:    os.Getenv("USER"),
+			Application: application,
+			Identity:    identity,
 			PaymentUrl:  paymentUrl,
 		}
 
@@ -159,8 +158,8 @@ mainLoop:
 		cardCvc = input
 
 		step2Request := pkg.SubmitCardRequest{
-			Application: step1Request.Application,
-			Identity:    step1Request.Identity,
+			Application: application,
+			Identity:    identity,
 			MDOrder:     step1Response.MDOrder,
 			CardNumber:  cardNumber,
 			Expiry:      cardExpiry,
@@ -175,7 +174,99 @@ mainLoop:
 			complete = false
 			continue mainLoop
 		}
-		fmt.Printf("response: %v", step2Response)
+		fmt.Printf("response: %v\n\n", step2Response)
+
+		if step2Response.Status != pkg.HackResponseStatusOk {
+			fmt.Println("response status is not ok")
+			fmt.Print("do you want to continue? (y/N) > ")
+			input, err = reader.ReadString('\n')
+			if err != nil {
+				eMsg := "error reading input, leaving"
+				log.WithError(err).Error(eMsg)
+				return errors.Wrap(err, eMsg)
+			}
+			input = strings.ToLower(strings.TrimSpace(input))
+			if input != "y" && input != "yes" {
+				eMsg := "not YES, bye bye"
+				fmt.Print(eMsg)
+				return errors.New(eMsg)
+			}
+			continue mainLoop
+		}
+		codeInput := false
+	codeInputLoop:
+		for !codeInput {
+			fmt.Print("have you received code? (Y/n) > ")
+			input, err = reader.ReadString('\n')
+			if err != nil {
+				eMsg := "error reading input, leaving"
+				log.WithError(err).Error(eMsg)
+				return errors.Wrap(err, eMsg)
+			}
+			input = strings.ToLower(strings.TrimSpace(input))
+			if input == "n" || input == "no" {
+				fmt.Print("resending code")
+				// resend code here
+				step3Request := pkg.ResendCodeRequest{
+					Application:   application,
+					Identity:      identity,
+					ACSRequestId:  step2Response.ACSRequestId,
+					ACSSessionUrl: step2Response.ACSSessionUrl,
+				}
+				step3Response, err = service.Step3ResendCode(ctx, step3Request)
+				if err != nil {
+					eMsg := "error executing step3 resend code, restarting"
+					log.WithError(err).Error(eMsg)
+					complete = false
+					continue mainLoop
+				}
+				fmt.Printf("response: %v\n", step3Response)
+				if step3Response.Status != pkg.HackResponseStatusOk {
+					fmt.Println("response status is not ok")
+					fmt.Print("do you want to continue? (y/N) > ")
+					input, err = reader.ReadString('\n')
+					if err != nil {
+						eMsg := "error reading input, leaving"
+						log.WithError(err).Error(eMsg)
+						return errors.Wrap(err, eMsg)
+					}
+					input = strings.ToLower(strings.TrimSpace(input))
+					if input != "y" && input != "yes" {
+						eMsg := "not YES, bye bye"
+						fmt.Print(eMsg)
+						return errors.New(eMsg)
+					}
+					continue mainLoop
+				}
+				continue codeInputLoop
+			}
+			codeInput = true
+		}
+		fmt.Print("enter code > ")
+		input, err = reader.ReadString('\n')
+		if err != nil {
+			eMsg := "error reading code, leaving"
+			log.WithError(err).Error(eMsg)
+			return errors.Wrap(err, eMsg)
+		}
+		input = strings.TrimSpace(input)
+		step4Request := pkg.ConfirmPaymentRequest{
+			Application:     application,
+			Identity:        identity,
+			MDOrder:         step1Response.MDOrder,
+			ACSRequestId:    step2Response.ACSRequestId,
+			ACSSessionUrl:   step2Response.ACSSessionUrl,
+			OneTimePassword: input,
+			TerminateUrl:    step2Response.TerminateUrl,
+		}
+		step4Response, err = service.Step4ConfirmPayment(ctx, step4Request)
+		if err != nil {
+			eMsg := "error executing step4 confirm payment, restarting"
+			log.WithError(err).Error(eMsg)
+			complete = false
+			continue mainLoop
+		}
+		fmt.Printf("response: %v\n", step4Response)
 
 	}
 	return nil

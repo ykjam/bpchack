@@ -1,5 +1,7 @@
 package pkg
 
+import "fmt"
+
 type ResendCodeRequest struct {
 	// application trying to use bpc hack, for information purpose only
 	Application string `json:"application"`
@@ -10,7 +12,10 @@ type ResendCodeRequest struct {
 }
 
 type ResendCodeResponse struct {
-	Status         HackResponseStatus `json:"status"`
-	CurrentAttempt int                `json:"current_attempt,omitempty"`
-	TotalAttempts  int                `json:"total_attempts"`
+	Status             HackResponseStatus `json:"status"`
+	ResendAttemptsLeft int                `json:"resend_attempts_left"`
+}
+
+func (s *ResendCodeResponse) String() string {
+	return fmt.Sprintf("ResendCodeResponse {status: %v, attemptsLeft: %d}", s.Status, s.ResendAttemptsLeft)
 }
