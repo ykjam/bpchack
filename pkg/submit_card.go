@@ -4,24 +4,24 @@ import "fmt"
 
 type SubmitCardRequest struct {
 	// application trying to use bpc hack, for information purpose only
-	Application string `json:"application"`
+	Application string `json:"app"`
 	// to identify each users request one from another
-	Identity   string `json:"identity"`
-	MDOrder    string `json:"md_order"`
-	CardNumber string `json:"card_number"`
-	Expiry     string `json:"expiry"`
-	NameOnCard string `json:"name_on_card"`
-	CVCCode    string `json:"cvc_code,omitempty"`
+	Identity   string `json:"id"`
+	MDOrder    string `json:"md-order"`
+	CardNumber string `json:"card-number"`
+	Expiry     string `json:"card-expiry"`
+	NameOnCard string `json:"name-on-card"`
+	CVCCode    string `json:"card-cvc,omitempty"`
 }
 
 type SubmitCardResponse struct {
 	Status        HackResponseStatus `json:"status"`
-	ACSRequestId  string             `json:"acs_request_id,omitempty"`
-	ACSSessionUrl string             `json:"acs_session_url,omitempty"`
+	ACSRequestId  string             `json:"acs-request-id,omitempty"`
+	ACSSessionUrl string             `json:"acs-session-url,omitempty"`
 	// number shown in acs form
-	ThreeDSecureNumber string `json:"three_d_secure_number,omitempty"`
-	ResendAttemptsLeft int    `json:"resend_attempts_left,omitempty"`
-	TerminateUrl       string `json:"terminate_url,omitempty"`
+	ThreeDSecureNumber string `json:"three-d-secure-number,omitempty"`
+	ResendAttemptsLeft int    `json:"resend-attempts-left,omitempty"`
+	TerminateUrl       string `json:"terminate-url,omitempty"`
 }
 
 func (s SubmitCardResponse) String() string {

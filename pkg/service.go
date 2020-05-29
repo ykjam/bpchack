@@ -115,7 +115,12 @@ func (s *service) Step1StartHack(ctx context.Context, req StartHackRequest) (res
 		return
 	}
 	data, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			clog.WithError(err).Error("error in response.Body.Close")
+		}
+	}()
 
 	rawResponse := string(data)
 	clog.WithField("raw", rawResponse).Info("Response received")
@@ -252,7 +257,12 @@ func (s *service) step2part1SubmitCard(ctx context.Context, pLog *log.Entry, req
 		return
 	}
 	data, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			clog.WithError(err).Error("error in response.Body.Close")
+		}
+	}()
 
 	rawResponse := string(data)
 	clog.WithField("raw", rawResponse).Debug("Response received")
@@ -310,7 +320,12 @@ func (s *service) step2part2SubmitACS(ctx context.Context, pLog *log.Entry, mdOr
 		return
 	}
 	data, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			clog.WithError(err).Error("error in response.Body.Close")
+		}
+	}()
 
 	rawResponse := string(data)
 	clog.WithField("raw", rawResponse).Debug("Response received")
@@ -398,7 +413,12 @@ func (s *service) step2part3ACSSendPassword(ctx context.Context, pLog *log.Entry
 		return
 	}
 	data, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			clog.WithError(err).Error("error in response.Body.Close")
+		}
+	}()
 
 	rawResponse := string(data)
 	clog.WithField("raw", rawResponse).Debug("Response received")
@@ -476,7 +496,12 @@ func (s *service) Step3ResendCode(ctx context.Context, req ResendCodeRequest) (r
 		return
 	}
 	data, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			clog.WithError(err).Error("error in response.Body.Close")
+		}
+	}()
 
 	rawResponse := string(data)
 	clog.WithField("raw", rawResponse).Debug("Response received")
@@ -598,7 +623,12 @@ func (s *service) step4Part1SubmitPassword(ctx context.Context, pLog *log.Entry,
 		return
 	}
 	data, err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
+	defer func() {
+		err = res.Body.Close()
+		if err != nil {
+			clog.WithError(err).Error("error in response.Body.Close")
+		}
+	}()
 
 	rawResponse := string(data)
 	clog.WithField("raw", rawResponse).Debug("Response received")

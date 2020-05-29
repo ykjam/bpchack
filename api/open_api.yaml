@@ -1,0 +1,280 @@
+openapi: 3.0.1
+info:
+  title: BPC Hack HTTP Proxy API
+  version: 0.1.0
+  description: API for BPC Hack HTTP Proxy, used to hack the crappy "BPC" eCommerce products used in local banks
+tags:
+  - name: "public"
+    description: "public utility methods"
+  - name: "workflow"
+    description: "workflow for eCommerce processing of transaction"
+paths:
+  '/api/epoch':
+    get:
+      tags:
+        - public
+      summary: 'return server epoch time'
+      description: 'used for checking time difference between client and server'
+      operationId: 'epoch'
+      responses:
+        200:
+          description: 'return server epoch time in seconds'
+
+  '/api/ip':
+    get:
+      tags:
+        - public
+      summary: 'return client ip address'
+      description: 'return ip address of client seen by server'
+      operationId: 'echo-ip'
+      responses:
+        200:
+          description: 'return remote address seen by server'
+
+  '/api/v1/start-hack':
+    post:
+      tags:
+        - workflow
+      summary: Start BPC Hack
+      description: >-
+        Start processing of order registered in BPC eCommerce module, first step
+      operationId: 'start-hack'
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartHackRequest'
+      responses:
+        200:
+          description: 'ok'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartHackResponse'
+        400:
+          description: 'request parameters did not pass validation'
+        default:
+          description: 'server error'
+
+  '/api/v1/submit-card':
+    post:
+      tags:
+        - workflow
+      summary: Submit Card
+      description: >-
+        Submit card information for BPC hack, second step
+      operationId: 'submit-card'
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubmitCardRequest'
+      responses:
+        200:
+          description: 'ok'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitCardResponse'
+        400:
+          description: 'request parameters did not pass validation'
+        default:
+          description: 'server error'
+
+  '/api/v1/resend-code':
+    post:
+      tags:
+        - workflow
+      summary: Resend code
+      description: >-
+        Resend code for payment authorization, third step
+      operationId: 'resend-code'
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResendCodeRequest'
+      responses:
+        200:
+          description: 'ok'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendCodeResponse'
+        400:
+          description: 'request parameters did not pass validation'
+        default:
+          description: 'server error'
+
+  '/api/v1/confirm-payment':
+    post:
+      tags:
+        - workflow
+      summary: Confirm payment
+      description: >-
+        Confirm payment with authorization code, fourth step
+      operationId: 'confirm-payment'
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+      responses:
+        200:
+          description: 'ok'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmPaymentResponse'
+        400:
+          description: 'request parameters did not pass validation'
+        default:
+          description: 'server error'
+
+components:
+  schemas:
+    HackResponseStatus:
+      type: string
+      description: response status
+      enum:
+        - ok
+        - network-error
+        - already-processed
+        - wrong-otp
+        - operation-cancelled
+        - specify-cvc
+        - other-error
+
+    ApplicationName:
+      type: string
+      description: for informative purposes only, name of application trying to use bpc hack.
+      pattern: '^[a-z0-9]{3,16}$'
+
+    UserIdentity:
+      type: string
+      description: for informative purposes only, user id of application trying to use bpc hack
+      pattern: '^[a-z0-9]{3,64}$'
+
+    StartHackRequest:
+      type: object
+      properties:
+        app:
+          $ref: '#/components/schemas/ApplicationName'
+        id:
+          $ref: '#/components/schemas/UserIdentity'
+        url:
+          description: payment url you received to redirect user to (during https://{crappy_bpc_server}/register.do request)
+          type: string
+
+    StartHackResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/HackResponseStatus'
+        md-order:
+          description: mdOrder id
+          type: string
+        remaining-time:
+          description: time in seconds remaining for order to expire
+          type: integer
+        is-cvc-required:
+          description: is cvc needed in SubmitCard info
+          type: boolean
+        amount-info:
+          description: amount with currency
+          type: string
+
+    SubmitCardRequest:
+      type: object
+      properties:
+        app:
+          $ref: '#/components/schemas/ApplicationName'
+        id:
+          $ref: '#/components/schemas/UserIdentity'
+        md-order:
+          type: string
+          description: mdOrder id obtained in start hack
+        card-number:
+          type: string
+          description: payment card number
+          pattern: '^[0-9]{16}$'
+        card-expiry:
+          type: string
+          description: payment card expiration date in YYYYMM format
+          pattern: '^[0-9]{6}$'
+        name-on-card:
+          type: string
+          description: 'name on payment card, length: min 4, maximum 32'
+        card-cvc:
+          type: string
+          description: can be empty, 3 digits
+          pattern: '^[0-9]{3}$'
+
+    SubmitCardResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/HackResponseStatus'
+        acs-request-id:
+          type: string
+        acs-session-url:
+          type: string
+        three-d-secure-number:
+          type: string
+        resend-attempts-left:
+          type: integer
+        terminate-url:
+          type: string
+
+    ResendCodeRequest:
+      type: object
+      properties:
+        app:
+          $ref: '#/components/schemas/ApplicationName'
+        id:
+          $ref: '#/components/schemas/UserIdentity'
+        acs-req-id:
+          type: string
+        acs-session-url:
+          type: string
+
+    ResendCodeResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/HackResponseStatus'
+        resend-attempts-left:
+          type: integer
+
+    ConfirmPaymentRequest:
+      type: object
+      properties:
+        app:
+          $ref: '#/components/schemas/ApplicationName'
+        id:
+          $ref: '#/components/schemas/UserIdentity'
+        md-order:
+          type: string
+          description: mdOrder id obtained in start hack
+        acs-req-id:
+          type: string
+        acs-session-url:
+          type: string
+        one-time-password:
+          type: string
+        terminate-url:
+          type: string
+
+    ConfirmPaymentResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/HackResponseStatus'
+        current-attempt:
+          type: integer
+        total-attempts:
+          type: integer
+        final-url:
+          type: string
+
