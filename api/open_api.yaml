@@ -277,4 +277,3 @@ components:
           type: integer
         final-url:
           type: string
-

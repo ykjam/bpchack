@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -13,6 +14,8 @@ import (
 )
 
 type HandlerContext interface {
+	HandleUtilityEpoch(w http.ResponseWriter, r *http.Request)
+	HandleUtilityIP(w http.ResponseWriter, r *http.Request)
 	HandleStartHack(w http.ResponseWriter, r *http.Request)
 	HandleSubmitCard(w http.ResponseWriter, r *http.Request)
 	HandleResendCode(w http.ResponseWriter, r *http.Request)
@@ -53,6 +56,11 @@ func errorHandler(w http.ResponseWriter, status int) {
 func errorHandlerWithError(w http.ResponseWriter, status int, err error) {
 	w.WriteHeader(status)
 	_, _ = fmt.Fprintf(w, "HTTP %d error\nError %v", status, err)
+}
+
+func responseWithCodeAndMessage(w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	_, _ = fmt.Fprintln(w, message)
 }
 
 func jsonResponse(clog *log.Entry, w http.ResponseWriter, response interface{}) {
@@ -247,6 +255,16 @@ func (c *handlerContext) HandleConfirmPayment(w http.ResponseWriter, r *http.Req
 		}
 		jsonResponse(clog, w, resp)
 	})
+}
+
+func (c *handlerContext) HandleUtilityEpoch(w http.ResponseWriter, _ *http.Request) {
+	epoch := time.Now().Unix()
+	responseWithCodeAndMessage(w, http.StatusOK, fmt.Sprintf("%d", epoch))
+}
+
+func (c *handlerContext) HandleUtilityIP(w http.ResponseWriter, r *http.Request) {
+	remoteIp := GetRemoteAddress(r)
+	responseWithCodeAndMessage(w, http.StatusOK, remoteIp)
 }
 
 func NewHandlerContext(service pkg.Service) HandlerContext {

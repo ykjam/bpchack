@@ -71,6 +71,8 @@ func run() error {
 	hc := web.NewHandlerContext(service)
 
 	sm := http.NewServeMux()
+	sm.HandleFunc("/api/epoch", hc.HandleUtilityEpoch)
+	sm.HandleFunc("/api/ip", hc.HandleUtilityIP)
 	sm.HandleFunc("/api/v1/start-hack", hc.HandleStartHack)
 	sm.HandleFunc("/api/v1/submit-card", hc.HandleSubmitCard)
 	sm.HandleFunc("/api/v1/resend-code", hc.HandleResendCode)
