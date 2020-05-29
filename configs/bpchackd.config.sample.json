@@ -1,0 +1,4 @@
+{
+  "listen_address": "0.0.0.0:9090",
+  "base_mpi_url": "https://crappy_bpc_mpi/payment/rest"
+}
