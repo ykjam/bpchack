@@ -56,6 +56,7 @@ func errorHandlerWithError(w http.ResponseWriter, status int, err error) {
 }
 
 func jsonResponse(clog *log.Entry, w http.ResponseWriter, response interface{}) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {

@@ -665,6 +665,7 @@ func (s *service) step4Part1SubmitPassword(ctx context.Context, pLog *log.Entry,
 		firstPart = rawResponse[index1:]
 		index2 = strings.Index(firstPart, ThreeDSecureWrongPasswordAttemptMiddle)
 		strCurrentAttempt := firstPart[:index2]
+		index2 += len(ThreeDSecureWrongPasswordAttemptMiddle)
 		secondPart = firstPart[index2:]
 		index3 = strings.Index(secondPart, ThreeDSecureWrongPasswordAttemptEnd)
 		strTotalAttempts := secondPart[:index3]
@@ -682,6 +683,7 @@ func (s *service) step4Part1SubmitPassword(ctx context.Context, pLog *log.Entry,
 			err = errors.Wrap(err, eMsg)
 			return
 		}
+		return
 
 	}
 	index1 += len(ThreeDSecurePaymentResponseBegin)
