@@ -175,8 +175,8 @@ components:
         md-order:
           description: mdOrder id
           type: string
-        remaining-time:
-          description: time in seconds remaining for order to expire
+        expiration-ts:
+          description: epoch for order to expire
           type: integer
         is-cvc-required:
           description: is cvc needed in SubmitCard info
@@ -277,3 +277,4 @@ components:
           type: integer
         final-url:
           type: string
+
