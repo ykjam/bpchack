@@ -175,6 +175,8 @@ components:
         md-order:
           description: mdOrder id
           type: string
+        remaining-time:
+          description: time in seconds remaining for order to expire
         expiration-ts:
           description: epoch for order to expire
           type: integer

@@ -148,7 +148,9 @@ func (s *service) Step1StartHack(ctx context.Context, req StartHackRequest) (res
 	// response is valid
 	resp.Status = HackResponseStatusOk
 	resp.MDOrder = mdOrder
+	resp.RemainingTime = bpcResponse.RemainingSecs
 	resp.ExpirationTs = bpcResponse.RemainingSecs + time.Now().Unix()
+
 	resp.IsCVCRequired = !bpcResponse.CvcNotRequired
 	resp.AmountInfo = bpcResponse.Amount
 	return
