@@ -10,4 +10,5 @@ const (
 	HackResponseStatusOperationCancelled HackResponseStatus = "operation-cancelled"
 	HackResponseStatusOtherError         HackResponseStatus = "other-error"
 	HackResponseStatusSpecifyCVC         HackResponseStatus = "specify-cvc"
+	HackResponseStatusInvalidCard        HackResponseStatus = "invalid-card"
 )
