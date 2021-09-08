@@ -263,10 +263,12 @@ components:
           type: string
         acs-session-url:
           type: string
-        one-time-password:
+        otp:
           type: string
-        terminate-url:
+          description: one time password send by sms from bank
+        term-url: 
           type: string
+          description: terminate url
 
     ConfirmPaymentResponse:
       type: object
@@ -279,4 +281,3 @@ components:
           type: integer
         final-url:
           type: string
-
