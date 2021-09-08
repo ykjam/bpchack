@@ -2,7 +2,7 @@ package response
 
 type SessionStatus struct {
 	// probably time till order will expire
-	RemainingSecs int    `json:"remainingSecs,omitempty"`
+	RemainingSecs int64  `json:"remainingSecs,omitempty"`
 	Redirect      string `json:"redirect,omitempty"`
 	// probably some kind of black magick, always zero
 	SessionStatus SessionStatusCode `json:"sessionStatus"`

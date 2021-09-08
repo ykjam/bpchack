@@ -116,9 +116,9 @@ func (s *service) Step1StartHack(ctx context.Context, req StartHackRequest) (res
 	}
 	data, err = ioutil.ReadAll(res.Body)
 	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			clog.WithError(err).Error("error in response.Body.Close")
+		errClose := res.Body.Close()
+		if errClose != nil {
+			clog.WithError(errClose).Error("error in response.Body.Close")
 		}
 	}()
 
@@ -149,6 +149,8 @@ func (s *service) Step1StartHack(ctx context.Context, req StartHackRequest) (res
 	resp.Status = HackResponseStatusOk
 	resp.MDOrder = mdOrder
 	resp.RemainingTime = bpcResponse.RemainingSecs
+	resp.ExpirationTs = bpcResponse.RemainingSecs + time.Now().Unix()
+
 	resp.IsCVCRequired = !bpcResponse.CvcNotRequired
 	resp.AmountInfo = bpcResponse.Amount
 	return
@@ -175,13 +177,22 @@ func (s *service) Step2SubmitCard(ctx context.Context, req SubmitCardRequest) (r
 	}
 	if !bpcResponsePart1.IsValid() {
 		eMsg := "invalid bpc response"
-		clog.WithError(err).Error(eMsg)
-		err = errors.Wrap(err, eMsg)
 		if bpcResponsePart1.ErrorCode == 1 {
-			resp.Status = HackResponseStatusSpecifyCVC
+			clog.WithField("response-error", bpcResponsePart1.Error).Error("error in response")
+			if bpcResponsePart1.IsCardError() {
+				resp.Status = HackResponseStatusInvalidCard
+			} else if bpcResponsePart1.IsCVCError() {
+				// error here, can be one of specify cvc or wrong card or something else
+				eMsg = "specify cvc"
+				resp.Status = HackResponseStatusSpecifyCVC
+			} else {
+				resp.Status = HackResponseStatusOtherError
+			}
 		} else {
 			resp.Status = HackResponseStatusOtherError
 		}
+		clog.WithError(err).Error(eMsg)
+		err = errors.Wrap(err, eMsg)
 		return
 	}
 	resp.TerminateUrl = bpcResponsePart1.TermUrl
@@ -213,7 +224,6 @@ func (s *service) Step2SubmitCard(ctx context.Context, req SubmitCardRequest) (r
 	}
 	resp.ResendAttemptsLeft = attemptsLeft
 	resp.Status = HackResponseStatusOk
-
 	return
 }
 
@@ -225,10 +235,19 @@ func (s *service) step2part1SubmitCard(ctx context.Context, pLog *log.Entry, req
 	form.Add("MDORDER", req.MDOrder)
 	form.Add("$PAN", req.CardNumber)
 	form.Add("$EXPIRY", req.Expiry)
+	// the following parameters added, since guys in BPC use `errorCode` parameter
+	// in response to indicate that there is an error,
+	// if language is not given, error message in parameter `error` is in russian,
+	// so to detect what kind of error is that, we need to look for keywords used in error message
+	// form.Add("language", "en")
+	// commented above, they do not support english :)
+
 	form.Add("TEXT", req.NameOnCard)
 	if req.CVCCode != "" {
-		clog.Info("CVC was provided")
+		clog.Debug("CVC was provided")
 		form.Add("$CVC", req.CVCCode)
+	} else {
+		form.Add("$CVC", "")
 	}
 	var res *http.Response
 	var r *http.Request
@@ -258,9 +277,9 @@ func (s *service) step2part1SubmitCard(ctx context.Context, pLog *log.Entry, req
 	}
 	data, err = ioutil.ReadAll(res.Body)
 	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			clog.WithError(err).Error("error in response.Body.Close")
+		errClose := res.Body.Close()
+		if errClose != nil {
+			clog.WithError(errClose).Error("error in response.Body.Close")
 		}
 	}()
 
@@ -321,9 +340,9 @@ func (s *service) step2part2SubmitACS(ctx context.Context, pLog *log.Entry, mdOr
 	}
 	data, err = ioutil.ReadAll(res.Body)
 	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			clog.WithError(err).Error("error in response.Body.Close")
+		errClose := res.Body.Close()
+		if errClose != nil {
+			clog.WithError(errClose).Error("error in response.Body.Close")
 		}
 	}()
 
@@ -414,9 +433,9 @@ func (s *service) step2part3ACSSendPassword(ctx context.Context, pLog *log.Entry
 	}
 	data, err = ioutil.ReadAll(res.Body)
 	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			clog.WithError(err).Error("error in response.Body.Close")
+		errClose := res.Body.Close()
+		if errClose != nil {
+			clog.WithError(errClose).Error("error in response.Body.Close")
 		}
 	}()
 
@@ -497,9 +516,9 @@ func (s *service) Step3ResendCode(ctx context.Context, req ResendCodeRequest) (r
 	}
 	data, err = ioutil.ReadAll(res.Body)
 	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			clog.WithError(err).Error("error in response.Body.Close")
+		errClose := res.Body.Close()
+		if errClose != nil {
+			clog.WithError(errClose).Error("error in response.Body.Close")
 		}
 	}()
 
@@ -551,18 +570,24 @@ func (s *service) Step4ConfirmPayment(ctx context.Context, req ConfirmPaymentReq
 	var currentAttempt, totalAttempts int
 	paResponse, currentAttempt, totalAttempts, err = s.step4Part1SubmitPassword(ctx, clog, req.ACSRequestId,
 		req.ACSSessionUrl, req.OneTimePassword)
+	clog.WithFields(log.Fields{
+		"pa-resp":        paResponse,
+		"cur-attempt":    currentAttempt,
+		"total-attempts": totalAttempts,
+		"resp-err":       err,
+	}).Info("step4Part1 SubmitPassword results")
 	// check submit otp response
 	// if ok, submit terminate url
 	if err == ErrWrongPasswordOperationCancelled {
 		eMsg := "error in part 1, wrong password operation cancelled"
 		clog.WithError(err).Error(eMsg)
-		err = errors.Wrap(err, eMsg)
+		err = nil
 		resp.Status = HackResponseStatusOperationCancelled
 		return
 	} else if err != nil {
 		eMsg := "error in part 1"
 		clog.WithError(err).Error(eMsg)
-		err = errors.Wrap(err, eMsg)
+		err = nil
 		resp.Status = HackResponseStatusOtherError
 		return
 	}
@@ -624,9 +649,9 @@ func (s *service) step4Part1SubmitPassword(ctx context.Context, pLog *log.Entry,
 	}
 	data, err = ioutil.ReadAll(res.Body)
 	defer func() {
-		err = res.Body.Close()
-		if err != nil {
-			clog.WithError(err).Error("error in response.Body.Close")
+		errClose := res.Body.Close()
+		if errClose != nil {
+			clog.WithError(errClose).Error("error in response.Body.Close")
 		}
 	}()
 

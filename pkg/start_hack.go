@@ -12,7 +12,8 @@ type StartHackRequest struct {
 type StartHackResponse struct {
 	Status        HackResponseStatus `json:"status"`
 	MDOrder       string             `json:"md-order,omitempty"`
-	RemainingTime int                `json:"remaining-time,omitempty"`
+	RemainingTime int64                `json:"remaining-time,omitempty"`
+	ExpirationTs  int64              `json:"expiration-ts,omitempty"`
 	IsCVCRequired bool               `json:"is-cvc-required,omitempty"`
 	AmountInfo    string             `json:"amount-info,omitempty"`
 }

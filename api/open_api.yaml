@@ -177,6 +177,8 @@ components:
           type: string
         remaining-time:
           description: time in seconds remaining for order to expire
+        expiration-ts:
+          description: epoch for order to expire
           type: integer
         is-cvc-required:
           description: is cvc needed in SubmitCard info
@@ -261,10 +263,12 @@ components:
           type: string
         acs-session-url:
           type: string
-        one-time-password:
+        otp:
           type: string
-        terminate-url:
+          description: one time password send by sms from bank
+        term-url: 
           type: string
+          description: terminate url
 
     ConfirmPaymentResponse:
       type: object

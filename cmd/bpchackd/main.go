@@ -124,7 +124,7 @@ func startServer(srv *http.Server, listener net.Listener) {
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
