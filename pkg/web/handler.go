@@ -97,14 +97,18 @@ func (c *handlerContext) isApplicationAndIdentityValid(application, identity str
 	return true
 }
 
-func (c *handlerContext) isCardValid(cardNumber, cardExpiry, nameOnCard, cvcCode string) bool {
+func (c *handlerContext) isCardValid(clog *log.Entry, cardNumber, cardExpiry, nameOnCard, cvcCode string) bool {
 	if !c.rCardNumber.MatchString(cardNumber) {
+		clog.WithField("card-number", cardNumber).Error("card number validation failed")
 		return false
 	} else if !c.rCardExpiry.MatchString(cardExpiry) {
+		clog.WithField("card-expiry", cardExpiry).Error("card expiry validation failed")
 		return false
 	} else if len(nameOnCard) < 4 || len(nameOnCard) > 32 {
+		clog.WithField("name-on-card", nameOnCard).Error("name on card validation failed")
 		return false
 	} else if cvcCode != "" && !c.rCardCVC.MatchString(cvcCode) {
+		clog.WithField("cvc", cvcCode).Error("cvc code validation failed")
 		return false
 	}
 	return true
@@ -158,7 +162,7 @@ func (c *handlerContext) HandleSubmitCard(w http.ResponseWriter, r *http.Request
 			errorHandler(w, http.StatusBadRequest)
 			return
 		}
-		if !c.isCardValid(cardNumber, cardExpiry, nameOnCard, cvcCode) {
+		if !c.isCardValid(clog, cardNumber, cardExpiry, nameOnCard, cvcCode) {
 			clog.Warn("not valid card details, ignoring request")
 			errorHandler(w, http.StatusBadRequest)
 			return
