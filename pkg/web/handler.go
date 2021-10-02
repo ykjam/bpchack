@@ -233,6 +233,14 @@ func (c *handlerContext) HandleConfirmPayment(w http.ResponseWriter, r *http.Req
 		acsSessionUrl := r.FormValue("acs-session-url")
 		oneTimePassword := r.FormValue("otp")
 		terminateUrl := r.FormValue("term-url")
+		clog.WithFields(log.Fields{
+			"application": application,
+			"identity":    identity,
+			"md-order":    mdOrder,
+			"acs-req-id":  acsRequestId,
+			"acs-ses-url": acsSessionUrl,
+			"otp-code":    oneTimePassword,
+		}).Debug("request received")
 		// validate inputs
 		if !c.isApplicationAndIdentityValid(application, identity) {
 			clog.Warn("not valid application or identity, ignoring request")
