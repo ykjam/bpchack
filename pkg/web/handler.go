@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/apex/log"
 
 	"ykjam/bpchack/pkg"
 )
@@ -74,12 +74,13 @@ func jsonResponse(clog *log.Entry, w http.ResponseWriter, response interface{}) 
 
 func (c *handlerContext) handleHttpPostWithLog(handleName string, w http.ResponseWriter, r *http.Request, f httpPostWithLog) {
 	ctx := r.Context()
-	clog := log.WithFields(log.Fields{
-		"remote-addr": GetRemoteAddress(r),
-		"uri":         r.RequestURI,
-		"method":      r.Method,
-		"handle":      handleName,
-	}).WithContext(ctx)
+	clog := log.FromContext(ctx).
+		WithFields(log.Fields{
+			"remote-addr": GetRemoteAddress(r),
+			"uri":         r.RequestURI,
+			"method":      r.Method,
+			"handle":      handleName,
+		})
 	if r.Method == http.MethodPost {
 		f(w, r, ctx, clog)
 	} else {

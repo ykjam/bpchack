@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"ykjam/bpchack/pkg/bpc/response"
 )
@@ -29,21 +29,37 @@ type service struct {
 	baseMpiUrl string
 }
 
+// Constants to get 3D Secure Phone number are ThreeDSecurePhoneTipBegin and ThreeDSecurePhoneTipEnd
+// format of HTML used is
+//
 // <div id="tipContainer" class="tipContainer"><span class="tip">One-time password will be sent to number {3DSECURE}</span></div>
+//
+// Constants to get 3D Secure Passwords attempts are ThreeDSecurePasswordAttemptsBegin and
+// ThreeDSecurePasswordAttemptsEnd
+// form of HTML used is
+//
+// <a id="resendPasswordLink" href="#" title="{3DSECURE} password send attempt(s) left" onclick="jsf.util.chain
+//
+// To get wrong password attempts in form of HTML
+//
+// <div id="errorContainer" class="errorContainer"><ul><li class="errorMessage">	Wrong password typed attempt {1} of {3} </li></ul></div>
+//
+//
+// to get some parameters PaRes in form of HTML is below
+//
+// <input type="hidden" name="PaRes" value="{CODE}" />
+
 const ThreeDSecurePhoneTipBegin = `<div id="tipContainer" class="tipContainer"><span class="tip">One-time password will be sent to number `
 const ThreeDSecurePhoneTipEnd = `</span></div>`
 
-// <a id="resendPasswordLink" href="#" title="{3DSECURE} password send attempt(s) left" onclick="jsf.util.chain
 const ThreeDSecurePasswordAttemptsBegin = `<a id="resendPasswordLink" href="#" title="`
 const ThreeDSecurePasswordAttemptsEnd = ` password send attempt(s) left" onclick="jsf.util.chain`
 
-// <div id="errorContainer" class="errorContainer"><ul><li class="errorMessage">	Wrong password typed attempt {1} of {3} </li></ul></div>
 const ThreeDSecureWrongPasswordAttemptBegin = `<div id="errorContainer" class="errorContainer"><ul><li class="errorMessage">	Wrong password typed attempt `
 const ThreeDSecureWrongPasswordAttemptMiddle = ` of `
 const ThreeDSecureWrongPasswordAttemptEnd = ` </li></ul></div>`
 const ThreeDSecureWrongPasswordFinal = `<span class="operationCancelledMessage">Operation cancelled</span>`
 
-// <input type="hidden" name="PaRes" value="{CODE}" />
 const ThreeDSecurePaymentResponseBegin = `<input type="hidden" name="PaRes" value="`
 const ThreeDSecurePaymentResponseEnd = `" />`
 
@@ -114,7 +130,7 @@ func (s *service) Step1StartHack(ctx context.Context, req StartHackRequest) (res
 		resp.Status = HackResponseStatusOtherError
 		return
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	defer func() {
 		errClose := res.Body.Close()
 		if errClose != nil {
@@ -275,7 +291,7 @@ func (s *service) step2part1SubmitCard(ctx context.Context, pLog *log.Entry, req
 		err = errors.New(eMsg)
 		return
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	defer func() {
 		errClose := res.Body.Close()
 		if errClose != nil {
@@ -338,7 +354,7 @@ func (s *service) step2part2SubmitACS(ctx context.Context, pLog *log.Entry, mdOr
 		err = errors.New(eMsg)
 		return
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	defer func() {
 		errClose := res.Body.Close()
 		if errClose != nil {
@@ -356,21 +372,21 @@ func (s *service) step2part2SubmitACS(ctx context.Context, pLog *log.Entry, mdOr
 	}
 	if res.Request == nil {
 		eMsg := "request of response is nil"
-		clog.Error(err)
+		clog.Error(eMsg)
 		err = errors.New(eMsg)
 		return
 	}
 	if res.Request.URL == nil {
 		eMsg := "url of request of response is nil"
-		clog.Error(err)
+		clog.Error(eMsg)
 		err = errors.New(eMsg)
 		return
 	}
 
-	redirUrl := res.Request.URL
-	clog.WithField("acs-redirect-url", redirUrl).Info("Redirected to ACS page")
-	resp.ACSSessionUrl = redirUrl.String()
-	resp.ACSRequestId = redirUrl.Query().Get("request_id")
+	redirectURL := res.Request.URL
+	clog.WithField("acs-redirect-url", redirectURL).Info("Redirected to ACS page")
+	resp.ACSSessionUrl = redirectURL.String()
+	resp.ACSRequestId = redirectURL.Query().Get("request_id")
 	// parse html, look for
 	// <div id=\"tipContainer\" class=\"tipContainer\"><span class=\"tip\">One-time password will be sent to number ${3DSecure Number}</span></div>
 	index1 := strings.Index(rawResponse, ThreeDSecurePhoneTipBegin)
@@ -431,7 +447,7 @@ func (s *service) step2part3ACSSendPassword(ctx context.Context, pLog *log.Entry
 		err = errors.New(eMsg)
 		return
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	defer func() {
 		errClose := res.Body.Close()
 		if errClose != nil {
@@ -514,7 +530,7 @@ func (s *service) Step3ResendCode(ctx context.Context, req ResendCodeRequest) (r
 		err = errors.New(eMsg)
 		return
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	defer func() {
 		errClose := res.Body.Close()
 		if errClose != nil {
@@ -647,7 +663,7 @@ func (s *service) step4Part1SubmitPassword(ctx context.Context, pLog *log.Entry,
 		err = errors.New(eMsg)
 		return
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	defer func() {
 		errClose := res.Body.Close()
 		if errClose != nil {
@@ -754,13 +770,13 @@ func (s *service) step4Part2CompleteOperation(ctx context.Context, pLog *log.Ent
 	}
 	if res.Request == nil {
 		eMsg := "request of response is nil"
-		clog.Error(err)
+		clog.Error(eMsg)
 		err = errors.New(eMsg)
 		return
 	}
 	if res.Request.URL == nil {
 		eMsg := "url of request of response is nil"
-		clog.Error(err)
+		clog.Error(eMsg)
 		err = errors.New(eMsg)
 		return
 	}

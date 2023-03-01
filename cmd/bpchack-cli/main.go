@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"ykjam/bpchack/pkg"
 )

@@ -5,7 +5,7 @@ import "fmt"
 type SubmitCardRequest struct {
 	// application trying to use bpc hack, for information purpose only
 	Application string `json:"app"`
-	// to identify each users request one from another
+	// to identify each user's request one from another
 	Identity   string `json:"id"`
 	MDOrder    string `json:"md-order"`
 	CardNumber string `json:"card-number"`

@@ -4,16 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"syscall"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"ykjam/bpchack/pkg"
 	"ykjam/bpchack/pkg/web"
@@ -26,7 +25,7 @@ type config struct {
 
 func ReadConfig(source string) (c *config, err error) {
 	var raw []byte
-	raw, err = ioutil.ReadFile(source)
+	raw, err = os.ReadFile(source)
 	if err != nil {
 		eMsg := "error reading config from file"
 		log.WithError(err).Error(eMsg)
@@ -124,7 +123,7 @@ func startServer(srv *http.Server, listener net.Listener) {
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
